@@ -87,7 +87,10 @@ defmodule L do
 
       next_state =
         state
-        |> put_in([Access.key!(:step_state), Access.key!(:optimizer_state)], {%{scale: next_scale}})
+        |> put_in(
+          [Access.key!(:step_state), Access.key!(:optimizer_state)],
+          {%{scale: next_scale}}
+        )
         |> Map.put(:handler_metadata, next_metadata)
 
       {:continue, next_state}
@@ -110,39 +113,41 @@ defmodule L do
     IO.inspect(state)
 
     model_state = state.step_state.model_state
-    next_stats = Enum.reduce(model_state, stats, fn({layer_name, value}, acc) ->
-      kernel = value["kernel"]
 
-      mean = %{
-        type: :mean,
-        value: Nx.to_number(Nx.mean(kernel)),
-        layer: layer_name,
-        iteration: iteration
-      }
+    next_stats =
+      Enum.reduce(model_state, stats, fn {layer_name, value}, acc ->
+        kernel = value["kernel"]
 
-      std = %{
-        type: :std,
-        value: Nx.to_number(Nx.standard_deviation(kernel)),
-        layer: layer_name,
-        iteration: iteration
-      }
+        mean = %{
+          type: :mean,
+          value: Nx.to_number(Nx.mean(kernel)),
+          layer: layer_name,
+          iteration: iteration
+        }
 
-      [mean | [std | acc]]
-    end)
+        std = %{
+          type: :std,
+          value: Nx.to_number(Nx.standard_deviation(kernel)),
+          layer: layer_name,
+          iteration: iteration
+        }
+
+        [mean | [std | acc]]
+      end)
 
     next_metadata =
       state.handler_metadata
       |> Map.put(:activations_stats, next_stats)
       |> Map.put(:real_iteration, iteration + 1)
 
-    {:continue, %{state | handler_metadata: next_metadata }}
+    {:continue, %{state | handler_metadata: next_metadata}}
   end
 
   defp store_activations_stats(%Loop.State{} = state) do
     stats = Map.get(state.handler_metadata, :activations_stats)
     Store.append_activations_stats(stats)
     next_metadata = Map.put(state.handler_metadata, :activations_stats, [])
-    {:continue, %{state | handler_metadata: next_metadata }}
+    {:continue, %{state | handler_metadata: next_metadata}}
   end
 
   # Storage to access after a training
@@ -159,6 +164,7 @@ defmodule L do
       store = %Store{
         activations_stats: []
       }
+
       save(store)
     end
 
@@ -169,6 +175,7 @@ defmodule L do
 
     def put_lrs(lrs) do
       store = get()
+
       %{store | lrs: lrs}
       |> save()
     end
@@ -182,6 +189,7 @@ defmodule L do
 
     def append_activations_stats(stats) do
       store = get()
+
       %{store | activations_stats: stats ++ store.activations_stats}
       |> save()
     end
@@ -197,13 +205,14 @@ defmodule L do
     defp plot(type, layer) do
       %Store{activations_stats: stats} = get()
 
-      stats = Enum.filter(stats, fn(stat) ->
-        if layer do
-          stat.type == type && stat.layer == layer
-        else
-          stat.type == type
-        end
-      end)
+      stats =
+        Enum.filter(stats, fn stat ->
+          if layer do
+            stat.type == type && stat.layer == layer
+          else
+            stat.type == type
+          end
+        end)
 
       line_chart(stats)
       |> Vl.encode_field(:x, "iteration", type: :quantitative)

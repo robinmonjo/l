@@ -34,10 +34,16 @@ defmodule L do
   defp halt_if_loss_is_nan(state) do
     if Nx.to_number(Nx.is_nan(state.step_state.loss)) == 1 do
       IO.puts("\nLoop halted by halt_on_crazy")
+      save_metadata_in_store(state)
       {:halt_loop, state}
     else
       {:continue, state}
     end
+  end
+
+  defp save_metadata_in_store(state) do
+    stats = Map.get(state.handler_metadata, :activations_stats)
+    if stats, do: Store.append_activations_stats(stats)
   end
 
   # LR finder
@@ -156,8 +162,7 @@ defmodule L do
     ]
 
     def init do
-      if :ets.whereis(__MODULE__) != :undefined, do: :ets.delete(__MODULE__)
-      :ets.new(__MODULE__, [:named_table, :public])
+      if :ets.whereis(__MODULE__) == :undefined, do: :ets.new(__MODULE__, [:named_table, :public])
 
       store = %Store{
         activations_stats: []

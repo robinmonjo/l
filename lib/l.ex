@@ -110,8 +110,6 @@ defmodule L do
     stats = Map.get(state.handler_metadata, :activations_stats, [])
     iteration = Map.get(state.handler_metadata, :real_iteration, 0)
 
-    IO.inspect(state)
-
     model_state = state.step_state.model_state
 
     next_stats =

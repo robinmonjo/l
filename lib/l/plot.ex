@@ -62,31 +62,24 @@ defmodule L.Plot do
     |> Vl.data_from_values(points)
   end
 
-  def hists() do
-    layers =
-      State.get(:monitored_layers)
-      # layers in order
-      |> Enum.reverse()
+  defp layers() do
+    State.get(:monitored_layers)
+    # layers in order
+    |> Enum.reverse()
+  end
 
-    hists = for l <- layers, do: hist(l)
+  def hists() do
+    hists = for l <- layers(), do: hist(l)
     Kino.Layout.grid(hists, columns: 3)
   end
 
   def hist(layer, img_scale \\ 5) do
-    hist_tensor =
-      State.get(:activations_stats)
-      |> Enum.filter(&(&1.type == :hist && &1.layer == layer))
-      # iterations 0 is last so putting it back first
-      |> Enum.reverse()
-      |> Enum.map(& &1.value)
-      |> Nx.stack()
-      |> Nx.transpose()
-      |> Nx.log1p()
+    hists_tensor = State.stacked_histograms(layer)
 
-    {w, h} = Nx.shape(hist_tensor)
+    {w, h} = Nx.shape(hists_tensor)
     {w, h} = {img_scale * w, img_scale * h}
 
-    max = Nx.reduce_max(hist_tensor)
+    max = Nx.reduce_max(hists_tensor)
 
     # 0 to 255 grayscale
     # using 245 so we have no white pixels and better see
@@ -94,7 +87,7 @@ defmodule L.Plot do
     scale = Nx.divide(245, max)
 
     img =
-      hist_tensor
+      hists_tensor
       # max becomes 0 (darker)
       |> Nx.subtract(max)
       |> Nx.abs()
@@ -110,5 +103,31 @@ defmodule L.Plot do
       |> Kino.Image.new()
 
     Kino.Layout.grid([Kino.Text.new(layer), img], columns: 1)
+  end
+
+  def deads() do
+    charts = for l <- layers(), do: dead(l)
+    Kino.Layout.grid(charts, columns: 3)
+  end
+
+  def dead(layer) do
+    hists_tensor = State.stacked_histograms(layer)
+
+    points =
+      hists_tensor[0]
+      |> Nx.divide(Nx.sum(hists_tensor, axes: [0]))
+      |> Nx.to_list()
+      |> Enum.with_index()
+      |> Enum.map(fn {value, i} -> %{iteration: i, value: value} end)
+
+    chart =
+      Vl.new(width: 200, height: 66)
+      |> Vl.mark(:line)
+      |> Vl.data_from_values(points)
+      |> Vl.encode_field(:x, "iteration", type: :quantitative)
+      |> Vl.encode_field(:y, "value", type: :quantitative)
+      |> Kino.VegaLite.new()
+
+    Kino.Layout.grid([Kino.Text.new(layer), chart], columns: 1)
   end
 end

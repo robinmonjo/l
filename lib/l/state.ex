@@ -58,6 +58,8 @@ defmodule L.State do
     cast({:append_activations_stats, layer_name, kernel})
   end
 
+  def stacked_histograms(layer), do: call({:stacked_histograms, layer})
+
   defp call(args), do: GenServer.call(__MODULE__, args)
   defp cast(args), do: GenServer.cast(__MODULE__, args)
 
@@ -68,6 +70,20 @@ defmodule L.State do
 
   def handle_call(:get, _from, state) do
     {:reply, state, state}
+  end
+
+  def handle_call({:stacked_histograms, layer}, _from, state) do
+    tensor =
+      state.activations_stats
+      |> Enum.filter(&(&1.type == :hist && &1.layer == layer))
+      # iterations 0 is last so putting it back first
+      |> Enum.reverse()
+      |> Enum.map(& &1.value)
+      |> Nx.stack()
+      |> Nx.transpose()
+      |> Nx.log1p()
+
+    {:reply, tensor, state}
   end
 
   def handle_call(:reset, _from, _state) do

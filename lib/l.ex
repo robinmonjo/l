@@ -15,7 +15,7 @@ defmodule L do
     model
     |> Loop.trainer(loss, optimizer, log: 1)
     |> Loop.handle_event(:started, fn state ->
-      State.loop_started
+      State.loop_started()
       {:continue, state}
     end)
     |> Loop.metric(fun, "iteration_loss", fn _, obs, _ -> obs end)
@@ -148,7 +148,9 @@ defmodule L do
 
     def init() do
       case GenServer.start_link(__MODULE__, empty_state(), name: __MODULE__) do
-        {:ok, _} -> :ok
+        {:ok, _} ->
+          :ok
+
         {:error, {:already_started, _}} ->
           # loop is already here, should we reset it ?
           case get() do
@@ -156,7 +158,9 @@ defmodule L do
               # loop was started, the state in it is from previous training
               reset()
               :ok
-            _ -> :ok
+
+            _ ->
+              :ok
           end
       end
     end
@@ -182,6 +186,7 @@ defmodule L do
     def loop_started(), do: call(:loop_started)
 
     def put_lrs(lrs), do: cast({:put_lrs, lrs})
+
     def append_activations_stats(layer_name, kernel) do
       cast({:append_activations_stats, layer_name, kernel})
     end
@@ -203,12 +208,12 @@ defmodule L do
     end
 
     def handle_call({:add_monitored_layer, name}, _from, state) do
-      next_state =
-        %{
-          state
-          | nb_monitored_layers: state.nb_monitored_layers + 1,
-            monitored_layers: [name | state.monitored_layers]
-        }
+      next_state = %{
+        state
+        | nb_monitored_layers: state.nb_monitored_layers + 1,
+          monitored_layers: [name | state.monitored_layers]
+      }
+
       {:reply, :ok, next_state}
     end
 
@@ -301,12 +306,12 @@ defmodule L do
     defp plot(type, layer) do
       State.get(:activations_stats)
       |> Enum.filter(fn stat ->
-          if layer do
-            stat.type == type && stat.layer == layer
-          else
-            stat.type == type
-          end
-        end)
+        if layer do
+          stat.type == type && stat.layer == layer
+        else
+          stat.type == type
+        end
+      end)
       |> line_chart()
       |> Vl.encode_field(:x, "iteration", type: :quantitative)
       |> Vl.encode_field(:y, "value", type: :quantitative, axis: [title: type])
@@ -318,6 +323,7 @@ defmodule L do
       Vl.new(width: 600, height: 200)
       |> Vl.mark(:line)
     end
+
     defp line_chart(points) do
       line_chart()
       |> Vl.data_from_values(points)
@@ -326,7 +332,8 @@ defmodule L do
     def hists() do
       layers =
         State.get(:monitored_layers)
-        |> Enum.reverse() # layers in order
+        # layers in order
+        |> Enum.reverse()
 
       hists = for l <- layers, do: hist(l)
       Kino.Layout.grid(hists, columns: 3)
@@ -336,8 +343,9 @@ defmodule L do
       hist_tensor =
         State.get(:activations_stats)
         |> Enum.filter(&(&1.type == :hist && &1.layer == layer))
-        |> Enum.reverse() # iterations 0 is last so putting it back first
-        |> Enum.map(&(&1.value))
+        # iterations 0 is last so putting it back first
+        |> Enum.reverse()
+        |> Enum.map(& &1.value)
         |> Nx.stack()
         |> Nx.transpose()
         |> Nx.log1p()
@@ -354,12 +362,14 @@ defmodule L do
 
       img =
         hist_tensor
-        |> Nx.subtract(max) # max becomes 0 (darker)
+        # max becomes 0 (darker)
+        |> Nx.subtract(max)
         |> Nx.abs()
         |> Nx.reverse(axes: [0])
         |> Nx.multiply(scale)
         |> Nx.as_type(:u8)
-        |> Nx.new_axis(-1) # adding channel dimension
+        # adding channel dimension
+        |> Nx.new_axis(-1)
         # upsampling
         |> Nx.new_axis(0)
         |> Axon.Layers.resize(size: {w, h}, channels: :last, method: :nearest)

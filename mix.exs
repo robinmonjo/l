@@ -21,10 +21,9 @@ defmodule L.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:nx, "~> 0.5.3"},
+      {:nx, "~> 0.6.0"},
       {:kino_vega_lite, "~> 0.1.7"},
-      {:exla, "~> 0.5.3"},
-      {:axon, "~> 0.5.1"}
+      {:axon, "~> 0.6.0"}
     ]
   end
 end

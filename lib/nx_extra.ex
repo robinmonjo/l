@@ -37,4 +37,8 @@ defmodule NxExtra do
     Nx.indexed_add(histogram, indices, update)
     |> Nx.flatten()
   end
+
+  defn normalize(t) do
+    (t - Nx.mean(t)) / Nx.standard_deviation(t)
+  end
 end

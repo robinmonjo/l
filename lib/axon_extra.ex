@@ -12,4 +12,10 @@ defmodule AxonExtra do
 
     mapping
   end
+
+  def relu(opts \\ []) do
+    fn x, _ ->
+      AxonExtra.Activations.relu(x, opts)
+    end
+  end
 end

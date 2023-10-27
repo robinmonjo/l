@@ -10,11 +10,19 @@ defmodule L.Plot do
     |> Kino.render()
   end
 
-  def lrs() do
-    State.get(:lrs)
+  def losses_for_lrs() do
+    State.get(:losses_for_lrs)
     |> line_chart()
     |> Vl.encode_field(:x, "lr", type: :quantitative, scale: [type: :log])
     |> Vl.encode_field(:y, "loss", type: :quantitative)
+    |> Kino.VegaLite.new()
+  end
+
+  def lrs() do
+    State.get(:lrs)
+    |> line_chart()
+    |> Vl.encode_field(:x, "iteration", type: :quantitative)
+    |> Vl.encode_field(:y, "lr", type: :quantitative)
     |> Kino.VegaLite.new()
   end
 

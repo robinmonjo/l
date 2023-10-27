@@ -10,6 +10,7 @@ defmodule L.State do
     :monitored_layers,
     :current_layer,
     :iteration,
+    :losses_for_lrs,
     :lrs
   ]
 
@@ -40,6 +41,7 @@ defmodule L.State do
       nb_monitored_layers: 0,
       current_layer: 0,
       iteration: 0,
+      losses_for_lrs: [],
       lrs: []
     }
   end
@@ -51,8 +53,9 @@ defmodule L.State do
   def reset(), do: call(:reset)
   def add_monitored_layer(name), do: call({:add_monitored_layer, name})
   def loop_started(), do: call(:loop_started)
+  def append_lr(lr), do: cast({:append_lr, lr})
 
-  def put_lrs(lrs), do: cast({:put_lrs, lrs})
+  def put_losses_for_lrs(lrs), do: cast({:put_losses_for_lrs, lrs})
 
   def append_activations_stats(layer_name, kernel) do
     cast({:append_activations_stats, layer_name, kernel})
@@ -104,8 +107,8 @@ defmodule L.State do
     {:reply, :ok, %{state | loop_started: true}}
   end
 
-  def handle_cast({:put_lrs, lrs}, state) do
-    {:noreply, %{state | lrs: lrs}}
+  def handle_cast({:put_losses_for_lrs, lrs}, state) do
+    {:noreply, %{state | losses_for_lrs: lrs}}
   end
 
   def handle_cast({:append_activations_stats, layer_name, kernel}, state) do
@@ -145,5 +148,13 @@ defmodule L.State do
     }
 
     {:noreply, next_state}
+  end
+
+  def handle_cast({:append_lr, lr}, %{lrs: lrs} = state) do
+    point = %{
+      iteration: state.iteration,
+      lr: abs(Nx.to_number(lr)) # Axon optimizers return the scale so it might be negative
+    }
+    {:noreply, %{state | lrs: lrs ++ [point]}}
   end
 end

@@ -88,8 +88,8 @@ defmodule L do
     lrs = Map.get(state.handler_metadata, :lrs, [])
 
     if loss > 3 * prev_min_loss do
-      State.put_lrs(lrs)
-      Kino.render(Plot.lrs())
+      State.put_losses_for_lrs(lrs)
+      Kino.render(Plot.losses_for_lrs())
       {:halt_loop, state}
     else
       # sgd optizer lr is stored this way, might be different for other
@@ -120,5 +120,20 @@ defmodule L do
 
       {:continue, next_state}
     end
+  end
+
+  def record_lr(%Loop{} = loop, opts \\ []) do
+    loop
+    |> Loop.handle_event(:iteration_completed, fn state ->
+      lr =
+        case elem(state.step_state.optimizer_state, 0) do
+          %{scale: lr} -> lr
+          %{count: step} ->
+            scheduler = Keyword.fetch!(opts, :scheduler)
+            scheduler.(step)
+        end
+      State.append_lr(lr)
+      {:continue, state}
+    end)
   end
 end

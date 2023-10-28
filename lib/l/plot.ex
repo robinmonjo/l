@@ -20,6 +20,11 @@ defmodule L.Plot do
 
   def lrs() do
     State.get(:lrs)
+    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.map(fn {lr, i} ->
+      %{iteration: i, lr: lr}
+    end)
     |> line_chart()
     |> Vl.encode_field(:x, "iteration", type: :quantitative)
     |> Vl.encode_field(:y, "lr", type: :quantitative)

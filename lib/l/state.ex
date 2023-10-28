@@ -151,10 +151,7 @@ defmodule L.State do
   end
 
   def handle_cast({:append_lr, lr}, %{lrs: lrs} = state) do
-    point = %{
-      iteration: state.iteration,
-      lr: abs(Nx.to_number(lr)) # Axon optimizers return the scale so it might be negative
-    }
-    {:noreply, %{state | lrs: lrs ++ [point]}}
+    lr_n = abs(Nx.to_number(lr)) # Axon optimizers return the scale so it might be negative
+    {:noreply, %{state | lrs: [lr_n | lrs]}}
   end
 end

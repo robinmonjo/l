@@ -102,7 +102,6 @@ defmodule L.Plot do
       # max becomes 0 (darker)
       |> Nx.subtract(max)
       |> Nx.abs()
-      |> Nx.reverse(axes: [0])
       |> Nx.multiply(scale)
       |> Nx.as_type(:u8)
       # adding channel dimension

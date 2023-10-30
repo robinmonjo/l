@@ -42,6 +42,7 @@ defmodule L.Layer do
     layer
     |> compute(:hist)
     |> Map.get(:hist)
+    |> Nx.reverse()
     |> Nx.transpose()
     |> Nx.log1p()
   end

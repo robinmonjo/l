@@ -50,17 +50,16 @@ defmodule L.Plot do
   end
 
   defp plot(type, layer) do
-    State.get(:activations_stats)
-    |> Enum.filter(fn stat ->
-      if layer do
-        stat.type == type && stat.layer == layer
-      else
-        stat.type == type
-      end
+    State.get(:layers)
+    |> Map.values()
+    |> Enum.filter(&(layer == nil || &1.name == layer))
+    |> Enum.flat_map(fn l ->
+      L.Layer.compute(l, type)
+      |> L.Layer.data(type)
     end)
     |> line_chart()
-    |> Vl.encode_field(:x, "iteration", type: :quantitative)
-    |> Vl.encode_field(:y, "value", type: :quantitative, axis: [title: type])
+    |> Vl.encode_field(:x, "x", type: :quantitative)
+    |> Vl.encode_field(:y, "y", type: :quantitative, axis: [title: type])
     |> Vl.encode_field(:color, "layer", type: :nominal)
     |> Kino.VegaLite.new()
   end
@@ -76,9 +75,7 @@ defmodule L.Plot do
   end
 
   defp layers() do
-    State.get(:monitored_layers)
-    # layers in order
-    |> Enum.reverse()
+    Map.keys(State.get(:layers))
   end
 
   def hists() do
@@ -86,8 +83,9 @@ defmodule L.Plot do
     Kino.Layout.grid(hists, columns: 3)
   end
 
-  def hist(layer, img_scale \\ 5) do
-    hists_tensor = State.stacked_histograms(layer)
+  def hist(layer_name, img_scale \\ 5) do
+    layer = Map.get(State.get(:layers), layer_name)
+    hists_tensor = L.Layer.stacked_histograms(layer)
 
     {w, h} = Nx.shape(hists_tensor)
     {w, h} = {img_scale * w, img_scale * h}
@@ -115,7 +113,7 @@ defmodule L.Plot do
       |> Nx.reshape({w, h, 1})
       |> Kino.Image.new()
 
-    Kino.Layout.grid([Kino.Text.new(layer), img], columns: 1)
+    Kino.Layout.grid([Kino.Text.new(layer_name), img], columns: 1)
   end
 
   def deads() do
@@ -123,8 +121,9 @@ defmodule L.Plot do
     Kino.Layout.grid(charts, columns: 3)
   end
 
-  def dead(layer) do
-    hists_tensor = State.stacked_histograms(layer)
+  def dead(layer_name) do
+    layer = Map.get(State.get(:layers), layer_name)
+    hists_tensor = L.Layer.stacked_histograms(layer)
 
     points =
       hists_tensor[0]

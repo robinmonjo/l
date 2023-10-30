@@ -75,9 +75,9 @@ defmodule L.Plot do
     Map.keys(State.get(:layers))
   end
 
-  def hists() do
+  def hists(columns \\ 3) do
     hists = for l <- layers(), do: hist(l)
-    Kino.Layout.grid(hists, columns: 3)
+    Kino.Layout.grid(hists, columns: columns)
   end
 
   def hist(layer_name, img_scale \\ 5) do
@@ -111,9 +111,9 @@ defmodule L.Plot do
     Kino.Layout.grid([Kino.Text.new(layer_name), img], columns: 1)
   end
 
-  def deads() do
+  def deads(columns \\ 3) do
     charts = for l <- layers(), do: dead(l)
-    Kino.Layout.grid(charts, columns: 3)
+    Kino.Layout.grid(charts, columns: columns)
   end
 
   def dead(layer_name) do

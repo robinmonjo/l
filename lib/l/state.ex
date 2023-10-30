@@ -51,7 +51,19 @@ defmodule L.State do
     cast({:append_layer_kernel, layer_name, kernel})
   end
 
-  def layer_stats(name, type), do: call({:layer_stats, name, type})
+  def layer_data(layer_name, type) do
+    :ok = call({:compute_layer_stat, layer_name, type})
+    get(:layers)
+    |> Map.get(layer_name)
+    |> Layer.data(type)
+  end
+
+  def layer_stacked_historgrams(layer_name) do
+    :ok = call({:compute_layer_stat, layer_name, :hist})
+    get(:layers)
+    |> Map.get(layer_name)
+    |> Layer.stacked_histograms()
+  end
 
   defp call(args), do: GenServer.call(__MODULE__, args)
   defp cast(args), do: GenServer.cast(__MODULE__, args)
@@ -73,6 +85,14 @@ defmodule L.State do
     {:reply, :ok, %{state | loop_started: true}}
   end
 
+  def handle_call({:compute_layer_stat, layer_name, type}, _frorm, state) do
+    layer = Map.get(state.layers, layer_name)
+    layer = Layer.compute(layer, type)
+    layers = Map.put(state.layers, layer_name, layer)
+
+    {:reply, :ok, %{state | layers: layers}}
+  end
+
   def handle_cast({:put_losses_for_lrs, lrs}, state) do
     {:noreply, %{state | losses_for_lrs: lrs}}
   end
@@ -81,7 +101,6 @@ defmodule L.State do
     layer = Map.get(state.layers, layer_name, %Layer{name: layer_name})
     layer = Layer.append(layer, kernel)
     next_layers = Map.put(state.layers, layer_name, layer)
-
     {:noreply, %{state | layers: next_layers}}
   end
 

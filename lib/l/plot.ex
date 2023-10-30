@@ -53,10 +53,7 @@ defmodule L.Plot do
     State.get(:layers)
     |> Map.values()
     |> Enum.filter(&(layer == nil || &1.name == layer))
-    |> Enum.flat_map(fn l ->
-      L.Layer.compute(l, type)
-      |> L.Layer.data(type)
-    end)
+    |> Enum.flat_map(&State.layer_data(&1.name, type))
     |> line_chart()
     |> Vl.encode_field(:x, "x", type: :quantitative)
     |> Vl.encode_field(:y, "y", type: :quantitative, axis: [title: type])
@@ -84,8 +81,7 @@ defmodule L.Plot do
   end
 
   def hist(layer_name, img_scale \\ 5) do
-    layer = Map.get(State.get(:layers), layer_name)
-    hists_tensor = L.Layer.stacked_histograms(layer)
+    hists_tensor = State.layer_stacked_historgrams(layer_name)
 
     {w, h} = Nx.shape(hists_tensor)
     {w, h} = {img_scale * w, img_scale * h}
@@ -121,8 +117,7 @@ defmodule L.Plot do
   end
 
   def dead(layer_name) do
-    layer = Map.get(State.get(:layers), layer_name)
-    hists_tensor = L.Layer.stacked_histograms(layer)
+    hists_tensor = State.layer_stacked_historgrams(layer_name)
 
     points =
       hists_tensor[0]

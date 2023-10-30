@@ -20,6 +20,11 @@ defmodule L.Plot do
 
   def lrs() do
     State.get(:lrs)
+    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.map(fn {lr, i} ->
+      %{iteration: i, lr: lr}
+    end)
     |> line_chart()
     |> Vl.encode_field(:x, "iteration", type: :quantitative)
     |> Vl.encode_field(:y, "lr", type: :quantitative)
@@ -45,17 +50,13 @@ defmodule L.Plot do
   end
 
   defp plot(type, layer) do
-    State.get(:activations_stats)
-    |> Enum.filter(fn stat ->
-      if layer do
-        stat.type == type && stat.layer == layer
-      else
-        stat.type == type
-      end
-    end)
+    State.get(:layers)
+    |> Map.values()
+    |> Enum.filter(&(layer == nil || &1.name == layer))
+    |> Enum.flat_map(&State.layer_data(&1.name, type))
     |> line_chart()
-    |> Vl.encode_field(:x, "iteration", type: :quantitative)
-    |> Vl.encode_field(:y, "value", type: :quantitative, axis: [title: type])
+    |> Vl.encode_field(:x, "x", type: :quantitative)
+    |> Vl.encode_field(:y, "y", type: :quantitative, axis: [title: type])
     |> Vl.encode_field(:color, "layer", type: :nominal)
     |> Kino.VegaLite.new()
   end
@@ -71,18 +72,16 @@ defmodule L.Plot do
   end
 
   defp layers() do
-    State.get(:monitored_layers)
-    # layers in order
-    |> Enum.reverse()
+    Map.keys(State.get(:layers))
   end
 
-  def hists() do
+  def hists(columns \\ 3) do
     hists = for l <- layers(), do: hist(l)
-    Kino.Layout.grid(hists, columns: 3)
+    Kino.Layout.grid(hists, columns: columns)
   end
 
-  def hist(layer, img_scale \\ 5) do
-    hists_tensor = State.stacked_histograms(layer)
+  def hist(layer_name, img_scale \\ 5) do
+    hists_tensor = State.layer_stacked_historgrams(layer_name)
 
     {w, h} = Nx.shape(hists_tensor)
     {w, h} = {img_scale * w, img_scale * h}
@@ -99,7 +98,6 @@ defmodule L.Plot do
       # max becomes 0 (darker)
       |> Nx.subtract(max)
       |> Nx.abs()
-      |> Nx.reverse(axes: [0])
       |> Nx.multiply(scale)
       |> Nx.as_type(:u8)
       # adding channel dimension
@@ -110,16 +108,16 @@ defmodule L.Plot do
       |> Nx.reshape({w, h, 1})
       |> Kino.Image.new()
 
-    Kino.Layout.grid([Kino.Text.new(layer), img], columns: 1)
+    Kino.Layout.grid([Kino.Text.new(layer_name), img], columns: 1)
   end
 
-  def deads() do
+  def deads(columns \\ 3) do
     charts = for l <- layers(), do: dead(l)
-    Kino.Layout.grid(charts, columns: 3)
+    Kino.Layout.grid(charts, columns: columns)
   end
 
-  def dead(layer) do
-    hists_tensor = State.stacked_histograms(layer)
+  def dead(layer_name) do
+    hists_tensor = State.layer_stacked_historgrams(layer_name)
 
     points =
       hists_tensor[0]
@@ -136,6 +134,6 @@ defmodule L.Plot do
       |> Vl.encode_field(:y, "value", type: :quantitative)
       |> Kino.VegaLite.new()
 
-    Kino.Layout.grid([Kino.Text.new(layer), chart], columns: 1)
+    Kino.Layout.grid([Kino.Text.new(layer_name), chart], columns: 1)
   end
 end

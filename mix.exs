@@ -23,7 +23,8 @@ defmodule L.MixProject do
     [
       {:nx, "~> 0.6.0"},
       {:kino_vega_lite, "~> 0.1.7"},
-      {:axon, "~> 0.6.0"}
+      {:axon, "~> 0.6.0"},
+      {:exla, "~> 0.6.0"}
     ]
   end
 end

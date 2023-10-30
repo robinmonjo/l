@@ -29,8 +29,7 @@ defmodule L do
       name = mapping[id]
 
       if Enum.member?(layers, name) do
-        State.add_monitored_layer(name)
-        fun = &State.append_activations_stats(name, &1)
+        fun = &State.append_layer_kernel(name, &1)
         Axon.attach_hook(node, fun, on: :forward)
       else
         node
@@ -127,11 +126,14 @@ defmodule L do
     |> Loop.handle_event(:iteration_completed, fn state ->
       lr =
         case elem(state.step_state.optimizer_state, 0) do
-          %{scale: lr} -> lr
+          %{scale: lr} ->
+            lr
+
           %{count: step} ->
             scheduler = Keyword.fetch!(opts, :scheduler)
             scheduler.(step)
         end
+
       State.append_lr(lr)
       {:continue, state}
     end)

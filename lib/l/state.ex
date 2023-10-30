@@ -67,7 +67,7 @@ defmodule L.State do
     |> Layer.stacked_histograms()
   end
 
-  defp call(args), do: GenServer.call(__MODULE__, args)
+  defp call(args), do: GenServer.call(__MODULE__, args, 20_000)
   defp cast(args), do: GenServer.cast(__MODULE__, args)
 
   # Callbacks

@@ -139,6 +139,6 @@ defmodule L.Plot do
       |> Vl.encode_field(:y, "value", type: :quantitative)
       |> Kino.VegaLite.new()
 
-    Kino.Layout.grid([Kino.Text.new(layer), chart], columns: 1)
+    Kino.Layout.grid([Kino.Text.new(layer_name), chart], columns: 1)
   end
 end

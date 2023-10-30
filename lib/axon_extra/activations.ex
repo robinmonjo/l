@@ -2,7 +2,7 @@ defmodule AxonExtra.Activations do
   import Nx.Defn
 
   defn relu(t, opts \\ []) do
-    opts = keyword!(opts, [leak: 0.0, sub: 0.0])
+    opts = keyword!(opts, leak: 0.0, sub: 0.0)
 
     leak = opts[:leak]
     sub = opts[:sub]

@@ -18,7 +18,8 @@ defmodule L.Layer do
   def data(layer, stat) do
     Map.get(layer, stat)
     |> Nx.to_list()
-    |> Enum.reverse() # stats are appended
+    # stats are appended
+    |> Enum.reverse()
     |> Enum.with_index()
     |> Enum.map(fn {value, i} ->
       %{
@@ -51,7 +52,9 @@ defmodule L.Layer do
     case layer do
       %{stacked: nil} ->
         %{layer | stacked: Nx.stack(layer.kernels)}
-      _ -> layer
+
+      _ ->
+        layer
     end
   end
 end

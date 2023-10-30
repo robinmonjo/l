@@ -36,6 +36,7 @@ defmodule L.ComputeStats do
         res = Nx.put_slice(acc, [i, 0], Nx.new_axis(hist, 0))
         {i + 1, res}
       end
+
     result
   end
 end

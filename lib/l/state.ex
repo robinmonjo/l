@@ -53,6 +53,7 @@ defmodule L.State do
 
   def layer_data(layer_name, type) do
     :ok = call({:compute_layer_stat, layer_name, type})
+
     get(:layers)
     |> Map.get(layer_name)
     |> Layer.data(type)
@@ -60,6 +61,7 @@ defmodule L.State do
 
   def layer_stacked_historgrams(layer_name) do
     :ok = call({:compute_layer_stat, layer_name, :hist})
+
     get(:layers)
     |> Map.get(layer_name)
     |> Layer.stacked_histograms()
@@ -105,7 +107,8 @@ defmodule L.State do
   end
 
   def handle_cast({:append_lr, lr}, %{lrs: lrs} = state) do
-    lr_n = abs(Nx.to_number(lr)) # Axon optimizers return the scale so it might be negative
+    # Axon optimizers return the scale so it might be negative
+    lr_n = abs(Nx.to_number(lr))
     {:noreply, %{state | lrs: [lr_n | lrs]}}
   end
 end

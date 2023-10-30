@@ -126,11 +126,14 @@ defmodule L do
     |> Loop.handle_event(:iteration_completed, fn state ->
       lr =
         case elem(state.step_state.optimizer_state, 0) do
-          %{scale: lr} -> lr
+          %{scale: lr} ->
+            lr
+
           %{count: step} ->
             scheduler = Keyword.fetch!(opts, :scheduler)
             scheduler.(step)
         end
+
       State.append_lr(lr)
       {:continue, state}
     end)

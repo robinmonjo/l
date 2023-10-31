@@ -7,23 +7,15 @@ defmodule L.ComputeStats do
   end
 
   def mean(t) do
-    EXLA.jit(&compute_mean/1).(t)
+    Nx.Defn.jit(&Nx.mean/2).(t, axes: axes(t))
   end
 
   def std(t) do
-    EXLA.jit(&compute_std/1).(t)
+    Nx.Defn.jit(&Nx.standard_deviation/2).(t, axes: axes(t))
   end
 
   def hist(t) do
     EXLA.jit(&compute_hist/1).(t)
-  end
-
-  defnp compute_mean(t) do
-    Nx.mean(t, axes: axes(t))
-  end
-
-  defnp compute_std(t) do
-    Nx.standard_deviation(t, axes: axes(t))
   end
 
   defnp compute_hist(tensors) do

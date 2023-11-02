@@ -39,6 +39,13 @@ defmodule L.State do
   end
 
   # API
+  def queue do
+    Process.whereis(__MODULE__)
+    |> Process.info(:messages)
+    |> elem(1)
+    |> length()
+  end
+
   def get(), do: call(:get)
   def get(key), do: Map.get(get(), key)
 

@@ -1,21 +1,23 @@
 defmodule L.ComputeStats do
   import Nx.Defn
 
+  @compiler EXLA
+
   deftransformp axes(t) do
     [_ | axes] = Nx.axes(t)
     axes
   end
 
   def mean(t) do
-    Nx.Defn.jit(&Nx.mean/2).(t, axes: axes(t))
+    Nx.Defn.jit(&Nx.mean/2, compiler: @compiler).(t, axes: axes(t))
   end
 
   def std(t) do
-    Nx.Defn.jit(&Nx.standard_deviation/2).(t, axes: axes(t))
+    Nx.Defn.jit(&Nx.standard_deviation/2, compiler: @compiler).(t, axes: axes(t))
   end
 
   def hist(t) do
-    EXLA.jit(&compute_hist/1).(t)
+    EXLA.jit(&compute_hist/1, compiler: @compiler).(t)
   end
 
   defnp compute_hist(tensors) do

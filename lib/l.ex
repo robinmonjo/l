@@ -138,4 +138,8 @@ defmodule L do
       {:continue, state}
     end)
   end
+
+  def fit(%Loop{} = loop, training_data, epochs) do
+    Loop.run(loop, training_data, %{}, epochs: epochs, compiler: EXLA)
+  end
 end

@@ -19,10 +19,6 @@ defmodule L do
       {:continue, state}
     end)
     |> Loop.metric(fun, "iteration_loss", fn _, obs, _ -> obs end)
-    |> measure_duration()
-    |> Loop.log(fn state ->
-      "Time: #{Enum.sum(get_metadata(state, :epochs_durations))}s"
-    end, event: :epoch_completed)
     |> halt_on_crazy()
   end
 
@@ -43,18 +39,10 @@ defmodule L do
   end
 
   def fit(%Loop{} = loop, training_data, epochs) do
-    Loop.run(loop, training_data, %{}, epochs: epochs, compiler: EXLA)
-  end
-
-  defp measure_duration(%Loop{} = loop) do
-    loop
-    |> Loop.handle_event(:epoch_started, &(
-      {:continue, put_metadata(&1, :epoch_start_time, DateTime.utc_now())}
-    ))
-    |> Loop.handle_event(:epoch_completed, fn state ->
-      duration = DateTime.diff(DateTime.utc_now(), get_metadata(state, :epoch_start_time))
-      {:continue, append_metadata(state, :epochs_durations, duration)}
-    end)
+    {time, res} =
+      :timer.tc(fn -> Loop.run(loop, training_data, %{}, epochs: epochs, compiler: EXLA) end)
+    IO.puts("\nTime: #{time/1_000_000}s")
+    res
   end
 
   # Plot default running average loss

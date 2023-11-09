@@ -19,6 +19,10 @@ defmodule L do
       {:continue, state}
     end)
     |> Loop.metric(fun, "iteration_loss", fn _, obs, _ -> obs end)
+    |> measure_duration()
+    |> Loop.log(fn state ->
+      "Time: #{Enum.sum(get_metadata(state, :epochs_durations))}s"
+    end, event: :epoch_completed)
     |> halt_on_crazy()
   end
 
@@ -36,6 +40,21 @@ defmodule L do
       end
     end)
     |> loop_trainer(loss, optimizer, monitored_layers: [])
+  end
+
+  def fit(%Loop{} = loop, training_data, epochs) do
+    Loop.run(loop, training_data, %{}, epochs: epochs, compiler: EXLA)
+  end
+
+  defp measure_duration(%Loop{} = loop) do
+    loop
+    |> Loop.handle_event(:epoch_started, &(
+      {:continue, put_metadata(&1, :epoch_start_time, DateTime.utc_now())}
+    ))
+    |> Loop.handle_event(:epoch_completed, fn state ->
+      duration = DateTime.diff(DateTime.utc_now(), get_metadata(state, :epoch_start_time))
+      {:continue, append_metadata(state, :epochs_durations, duration)}
+    end)
   end
 
   # Plot default running average loss
@@ -75,7 +94,7 @@ defmodule L do
 
   defp increase_learning_rate(%Loop.State{} = state, lr_mult) do
     loss = Nx.to_number(state.metrics["iteration_loss"])
-    prev_min_loss = Map.get(state.handler_metadata, :min_loss, 10_000)
+    prev_min_loss = get_metadata(state, :min_loss, 10_000)
 
     min_loss =
       if loss < prev_min_loss do
@@ -84,38 +103,33 @@ defmodule L do
         prev_min_loss
       end
 
-    lrs = Map.get(state.handler_metadata, :lrs, [])
+    lrs = get_metadata(state, :lrs, [])
 
     if loss > 3 * prev_min_loss do
       State.put_losses_for_lrs(lrs)
       Kino.render(Plot.losses_for_lrs())
       {:halt_loop, state}
     else
-      # sgd optizer lr is stored this way, might be different for other
+      # sgd and adam optimizers lr are stored this way, might be different for other
       # optimizers
-      {%{scale: scale}} = state.step_state.optimizer_state
+      opt_state = state.step_state.optimizer_state
+      %{scale: scale} = elem(opt_state, 0)
 
       point = %{
         loss: loss,
         lr: abs(Nx.to_number(scale))
       }
 
-      lrs = [point | lrs]
-
-      next_metadata =
-        state.handler_metadata
-        |> Map.put(:min_loss, min_loss)
-        |> Map.put(:lrs, lrs)
-
       next_scale = Nx.multiply(scale, lr_mult)
 
       next_state =
         state
+        |> put_metadata(:min_loss, min_loss)
+        |> append_metadata(:lrs, point)
         |> put_in(
           [Access.key!(:step_state), Access.key!(:optimizer_state)],
-          {%{scale: next_scale}}
+          put_elem(opt_state, 0, %{scale: next_scale})
         )
-        |> Map.put(:handler_metadata, next_metadata)
 
       {:continue, next_state}
     end
@@ -139,7 +153,21 @@ defmodule L do
     end)
   end
 
-  def fit(%Loop{} = loop, training_data, epochs) do
-    Loop.run(loop, training_data, %{}, epochs: epochs, compiler: EXLA)
+  defp get_metadata(state, key, default \\ nil) do
+    Map.get(state.handler_metadata, key, default)
+  end
+
+  defp put_metadata(state, key, value) do
+    next_metadata =
+      state.handler_metadata
+      |> Map.put(key, value)
+
+    %{state | handler_metadata: next_metadata}
+  end
+
+  defp append_metadata(state, key, value) do
+    values = get_metadata(state, key, [])
+    values = values ++ [value]
+    put_metadata(state, key, values)
   end
 end

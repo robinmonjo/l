@@ -19,7 +19,7 @@ defmodule L do
       {:continue, state}
     end)
     |> Loop.metric(fun, "iteration_loss", fn _, obs, _ -> obs end)
-    |> halt_on_crazy()
+    |> kino_early_stop()
   end
 
   defp loop_trainer(model, loss, optimizer, monitored_layers: layers) do
@@ -41,7 +41,8 @@ defmodule L do
   def fit(%Loop{} = loop, training_data, epochs) do
     {time, res} =
       :timer.tc(fn -> Loop.run(loop, training_data, %{}, epochs: epochs, compiler: EXLA) end)
-    IO.puts("\nTime: #{time/1_000_000}s")
+
+    IO.puts("\nTime: #{time / 1_000_000}s")
     res
   end
 
@@ -55,21 +56,6 @@ defmodule L do
   def plot_iteration_loss(%Loop{} = loop) do
     loop
     |> Loop.kino_vega_lite_plot(Plot.metric("iteration_loss"), "iteration_loss")
-  end
-
-  # Halt on crazy
-  def halt_on_crazy(%Loop{} = loop) do
-    loop
-    |> Loop.handle_event(:iteration_completed, &halt_if_loss_is_nan/1)
-  end
-
-  defp halt_if_loss_is_nan(state) do
-    if Nx.to_number(Nx.is_nan(state.step_state.loss)) == 1 do
-      IO.puts("\nLoop halted by halt_on_crazy")
-      {:halt_loop, state}
-    else
-      {:continue, state}
-    end
   end
 
   # LR finder
@@ -139,6 +125,34 @@ defmodule L do
       State.append_lr(lr)
       {:continue, state}
     end)
+  end
+
+  defp kino_early_stop(loop) do
+    frame = Kino.Frame.new() |> Kino.render()
+    stop_button = Kino.Control.button("stop")
+    Kino.Frame.render(frame, stop_button)
+
+    {:ok, button_agent} = Agent.start_link(fn -> nil end)
+
+    stop_button
+    |> Kino.Control.stream()
+    |> Kino.listen(fn _event ->
+      Agent.update(button_agent, fn _ -> :stop end)
+    end)
+
+    handler = fn state ->
+      stop_state = Agent.get(button_agent, & &1)
+
+      if stop_state == :stop do
+        Agent.stop(button_agent)
+        Kino.Frame.render(frame, "stopped")
+        {:halt_loop, state}
+      else
+        {:continue, state}
+      end
+    end
+
+    Loop.handle_event(loop, :iteration_completed, handler)
   end
 
   defp get_metadata(state, key, default \\ nil) do

@@ -10,7 +10,12 @@ defmodule L do
   end
 
   defp loop_trainer(model, loss, optimizer, monitored_layers: []) do
-    fun = &apply(Axon.Losses, loss, [&1, &2, [reduction: :mean]])
+    fun =
+      if is_atom(loss) do
+        &apply(Axon.Losses, loss, [&1, &2, [reduction: :mean]])
+      else
+        loss
+      end
 
     model
     |> Loop.trainer(loss, optimizer, log: 1)

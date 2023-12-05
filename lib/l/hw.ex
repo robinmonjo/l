@@ -19,8 +19,8 @@ defmodule L.HW do
   end
 
   def compiler(client, device_id \\ 0)
-  def compiler(:cpu, device_id \\ 0), do: compiler(:host, device_id)
-  def compiler(:gpu, device_id \\ 0), do: compiler(:cuda, device_id)
+  def compiler(:cpu, device_id), do: compiler(:host, device_id)
+  def compiler(:gpu, device_id), do: compiler(:cuda, device_id)
 
   def compiler(client, device_id) do
     {EXLA.Backend, client: client, device_id: device_id}

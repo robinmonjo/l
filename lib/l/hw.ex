@@ -17,6 +17,14 @@ defmodule L.HW do
     set_nx_backend(client: client, device_id: device_id)
   end
 
+  def compiler(client, device_id \\ 0)
+  def compiler(:cpu, device_id \\ 0), do: compiler(:host, device_id)
+  def compiler(:gpu, device_id \\ 0), do: compiler(:cuda, device_id)
+
+  def compiler(client, device_id) do
+    {EXLA.Backend, client: client, device_id: device_id}
+  end
+
   defp set_nx_backend(opts) do
     Nx.default_backend({EXLA.Backend, opts})
   end

@@ -15,6 +15,7 @@ defmodule L.HW do
 
   def set(client, device_id) do
     set_nx_backend(client: client, device_id: device_id)
+    Nx.default_backend()
   end
 
   def compiler(client, device_id \\ 0)

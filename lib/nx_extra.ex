@@ -41,4 +41,26 @@ defmodule NxExtra do
   defn normalize(t) do
     (t - Nx.mean(t)) / Nx.standard_deviation(t)
   end
+
+  def size(container) do
+    container_byte_size(container)
+    |> human_readable_size()
+  end
+
+  defp container_byte_size(%Nx.Tensor{} = t) do
+    Nx.byte_size(t)
+  end
+
+  defp container_byte_size(%{} = map) do
+    Enum.reduce(map, 0, fn
+      {_, %Nx.Tensor{} = t}, acc -> acc + Nx.byte_size(t)
+      {_, %{} = m}, acc -> acc + container_byte_size(m)
+    end)
+  end
+
+  defp human_readable_size(byte_size, base \\ 1024) do
+    i = if byte_size == 0, do: 0, else: floor(:math.log(byte_size) / :math.log(base))
+    size = byte_size / :math.pow(base, i)
+    "#{Float.round(size, 2)} #{Enum.at(["B", "kB", "MB", "GB", "TB"], i)}"
+  end
 end

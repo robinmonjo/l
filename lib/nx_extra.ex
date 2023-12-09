@@ -42,6 +42,14 @@ defmodule NxExtra do
     (t - Nx.mean(t)) / Nx.standard_deviation(t)
   end
 
+  def save(container, path) do
+    File.write!(path, Nx.serialize(container))
+  end
+
+  def load(path) do
+    Nx.deserialize(File.read!(path))
+  end
+
   def size(container) do
     container_byte_size(container)
     |> human_readable_size()

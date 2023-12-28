@@ -9,6 +9,12 @@ defmodule L.HW do
     end)
   end
 
+  def set_best do
+    Nx.default_backend(EXLA.Backend)
+    Nx.global_default_backend(EXLA.Backend)
+    Nx.default_backend()
+  end
+
   def set(client, device_id \\ 0)
   def set(:cpu, device_id), do: set(:host, device_id)
   def set(:gpu, device_id), do: set(:cuda, device_id)
@@ -28,5 +34,6 @@ defmodule L.HW do
 
   defp set_nx_backend(opts) do
     Nx.default_backend({EXLA.Backend, opts})
+    Nx.global_default_backend({EXLA.Backend, opts})
   end
 end

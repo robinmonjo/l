@@ -43,9 +43,12 @@ defmodule L do
     |> loop_trainer(loss, optimizer, monitored_layers: [])
   end
 
-  def fit(%Loop{} = loop, training_data, epochs) do
+  def fit(%Loop{} = loop, training_data, epochs, opts \\ []) do
     {time, res} =
-      :timer.tc(fn -> Loop.run(loop, training_data, %{}, epochs: epochs, compiler: EXLA) end)
+      :timer.tc(fn ->
+        options = [epochs: epochs, compiler: EXLA] ++ opts
+        Loop.run(loop, training_data, %{}, options)
+      end)
 
     IO.puts("\nTime: #{time / 1_000_000}s")
     res

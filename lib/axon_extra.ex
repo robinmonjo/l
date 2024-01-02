@@ -5,7 +5,7 @@ defmodule AxonExtra do
         count = Map.get(counts, node.op_name, 0)
 
         {
-          Map.put(mapping, node.id, "#{node.op_name}_#{count}"),
+          Map.put(mapping, node.id, node.name.(node.op_name, counts)),
           Map.put(counts, node.op_name, count + 1)
         }
       end)
